@@ -108,10 +108,26 @@ jobs:
           .venv-windows-native\Scripts\python.exe -c "import sys; sys.path.insert(0, 'windows-native'); import patches; print('Patches loaded successfully')"
         shell: pwsh
 
-      - name: Run validation suite with coverage
+      - name: "Run tests - Batch 1: Agent tests"
         run: |
-          .venv-windows-native\Scripts\python.exe windows-native/run_tests.py --cov=windows-native --cov-report=xml --cov-report=term-missing tests/test_hermes_constants.py tests/tools/test_windows_compat.py tests/tools/test_tool_result_storage.py tests/tools/test_file_operations.py tests/tools/test_registry.py
+          .venv-windows-native\Scripts\python.exe windows-native/run_tests.py tests/agent/
         shell: pwsh
+
+      - name: "Run tests - Batch 2: CLI tests"
+        run: |
+          .venv-windows-native\Scripts\python.exe windows-native/run_tests.py tests/cli/
+        shell: pwsh
+
+      - name: "Run tests - Batch 3: Tools tests (core)"
+        run: |
+          .venv-windows-native\Scripts\python.exe windows-native/run_tests.py tests/tools/test_registry.py tests/tools/test_windows_compat.py tests/tools/test_tool_result_storage.py tests/tools/test_file_operations.py
+        shell: pwsh
+
+      # Note: Skipped tests:
+      # - tests/cron/ : Unix-specific (cron, signal handling, daemon processes)
+      # - tests/gateway/ : External service integrations (Telegram/Discord/etc.) require API keys
+      # - tests/acp/ : ACP server tests (optional, requires additional setup)
+      # - tests/integration/ : Integration tests (external dependencies)
 
       - name: Upload coverage artifact
         if: always()

@@ -29,6 +29,7 @@ def _isolate_hermes_home(tmp_path, monkeypatch):
     # Reset plugin singleton so tests don't leak plugins from ~/.hermes/plugins/
     try:
         import hermes_cli.plugins as _plugins_mod
+
         monkeypatch.setattr(_plugins_mod, "_plugin_manager", None)
     except Exception:
         pass
@@ -71,8 +72,10 @@ def mock_config():
 # Prevents hanging tests (subprocess spawns, blocking I/O) from stalling the
 # entire test suite.
 
+
 def _timeout_handler(signum, frame):
     raise TimeoutError("Test exceeded 30 second timeout")
+
 
 @pytest.fixture(autouse=True)
 def _ensure_current_event_loop(request):
@@ -119,3 +122,16 @@ def _enforce_test_timeout():
     yield
     signal.alarm(0)
     signal.signal(signal.SIGALRM, old)
+
+
+def pytest_configure(config):
+    """Apply Windows compatibility patches if running on Windows."""
+    if sys.platform == "win32":
+        try:
+            # Try to import patches from windows-native directory
+            import patches
+
+            patches.apply_patches_for_pytest()
+        except ImportError:
+            # patches module not available, skip
+            pass
