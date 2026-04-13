@@ -123,6 +123,65 @@ if sys.platform == "win32":
             print(f"[PATCH] Failed to patch shlex: {e}", file=sys.stderr)
 
     # ========================================================================
+    # Patch 3.5: Mock firecrawl module (optional dependency, not always installed)
+    # ========================================================================
+
+    def _patch_firecrawl():
+        """Mock firecrawl module to prevent ModuleNotFoundError during test collection.
+
+        The firecrawl-py package is an optional dependency for web scraping features.
+        If not installed, tests that import tools.web_tools will fail during collection.
+        This mock allows tests to run without the actual firecrawl package.
+        """
+        try:
+            # Check if firecrawl is already available
+            import firecrawl
+
+            return  # No need to mock
+        except ImportError:
+            pass
+
+        try:
+            import types
+
+            # Create mock firecrawl module
+            firecrawl_mock = types.ModuleType("firecrawl")
+
+            # Create mock Firecrawl class
+            class MockFirecrawl:
+                def __init__(self, api_key=None, base_url=None, **kwargs):
+                    self.api_key = api_key
+                    self.base_url = base_url or "https://api.firecrawl.dev"
+                    self._kwargs = kwargs
+
+                def search(self, *args, **kwargs):
+                    raise RuntimeError(
+                        "firecrawl is mocked (not installed). "
+                        "Install firecrawl-py to enable web scraping."
+                    )
+
+                def scrape(self, *args, **kwargs):
+                    raise RuntimeError(
+                        "firecrawl is mocked (not installed). "
+                        "Install firecrawl-py to enable web scraping."
+                    )
+
+                def crawl(self, *args, **kwargs):
+                    raise RuntimeError(
+                        "firecrawl is mocked (not installed). "
+                        "Install firecrawl-py to enable web scraping."
+                    )
+
+            firecrawl_mock.Firecrawl = MockFirecrawl
+            sys.modules["firecrawl"] = firecrawl_mock
+            print(
+                f"[PATCH] Mocked firecrawl module (not installed, optional dependency)",
+                file=sys.stderr,
+            )
+        except Exception as e:
+            print(f"[PATCH] Failed to mock firecrawl: {e}", file=sys.stderr)
+
+    # ========================================================================
     # Patch 4: Replace fcntl with msvcrt for Windows file locking
     # ========================================================================
 
@@ -417,6 +476,7 @@ if sys.platform == "win32":
         _patch_tool_result_storage()
         _patch_terminal_env_for_windows()
         _patch_voice_mode()
+        _patch_firecrawl()
         _patch_shlex()
         _patch_fcntl()
         _patch_detect_file_drop()
